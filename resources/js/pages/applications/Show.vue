@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
-import { ExternalLink, Pencil, Trash2 } from '@lucide/vue';
+import {
+    ArrowRight,
+    CircleDot,
+    ExternalLink,
+    Pencil,
+    Trash2,
+} from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { destroy, edit, index } from '@/routes/applications';
 import type { JobApplication, StatusOption } from '@/types';
@@ -22,6 +28,15 @@ defineOptions({
 const statusLabel = (): string =>
     props.statuses.find((status) => status.value === props.application.status)
         ?.label ?? props.application.status;
+
+const labelForStatus = (value: string): string =>
+    props.statuses.find((status) => status.value === value)?.label ?? value;
+
+const formatDateTime = (value: string): string =>
+    new Intl.DateTimeFormat('en-CA', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(value));
 
 const salary = (): string => {
     const { salary_min, salary_max, salary_currency } = props.application;
@@ -146,6 +161,60 @@ const confirmDelete = (): boolean => window.confirm('Delete this application?');
                 {{ application.description }}
             </p>
         </div>
+
+        <section class="rounded-xl border p-5">
+            <div>
+                <h2 class="font-medium">Status history</h2>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Every stage transition recorded for this application.
+                </p>
+            </div>
+
+            <ol v-if="application.status_events?.length" class="mt-5 space-y-5">
+                <li
+                    v-for="event in application.status_events"
+                    :key="event.id"
+                    class="flex gap-3"
+                >
+                    <CircleDot
+                        class="mt-0.5 size-4 shrink-0 text-primary"
+                        aria-hidden="true"
+                    />
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                            <template v-if="event.from_status">
+                                <span class="font-medium">
+                                    {{ labelForStatus(event.from_status) }}
+                                </span>
+                                <ArrowRight
+                                    class="size-3.5 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                            </template>
+                            <span class="font-medium">
+                                {{ labelForStatus(event.to_status) }}
+                            </span>
+                        </div>
+                        <time
+                            :datetime="event.changed_at"
+                            class="mt-1 block text-xs text-muted-foreground"
+                        >
+                            {{ formatDateTime(event.changed_at) }}
+                        </time>
+                        <p
+                            v-if="event.note"
+                            class="mt-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                        >
+                            {{ event.note }}
+                        </p>
+                    </div>
+                </li>
+            </ol>
+
+            <p v-else class="mt-5 text-sm text-muted-foreground">
+                Status tracking begins with the next stage change.
+            </p>
+        </section>
 
         <div class="flex flex-wrap gap-3">
             <Button v-if="application.job_url" variant="outline" as-child>

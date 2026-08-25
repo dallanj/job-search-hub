@@ -37,6 +37,15 @@ export type JobApplication = {
     description: string | null;
     created_at: string;
     company: CompanyOption;
+    status_events?: ApplicationStatusEvent[];
+};
+
+export type ApplicationStatusEvent = {
+    id: number;
+    from_status: ApplicationStatus | null;
+    to_status: ApplicationStatus;
+    changed_at: string;
+    note: string | null;
 };
 
 export type PaginationLink = {

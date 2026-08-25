@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApplicationStatus;
+use App\Models\ApplicationStatusEvent;
 use App\Models\Company;
 use App\Models\JobApplication;
 use App\Models\User;
@@ -50,6 +51,7 @@ test('an application can be reordered within its current stage', function () {
         ->orderBy('sort_order')
         ->pluck('sort_order')
         ->all())->toBe([0, 1, 2]);
+    expect(ApplicationStatusEvent::query()->count())->toBe(0);
 });
 
 test('an application can move between stages and both stages are reindexed', function () {
@@ -98,6 +100,11 @@ test('an application can move between stages and both stages are reindexed', fun
         ->orderBy('sort_order')
         ->pluck('id')
         ->all())->toBe([$movedApplication->id, $targetApplication->id]);
+    $this->assertDatabaseHas('application_status_events', [
+        'job_application_id' => $movedApplication->id,
+        'from_status' => ApplicationStatus::Applied->value,
+        'to_status' => ApplicationStatus::Interview->value,
+    ]);
 });
 
 test('positions beyond the end append the application', function () {

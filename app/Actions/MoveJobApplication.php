@@ -39,6 +39,12 @@ class MoveJobApplication
             if ($sourceStatus !== $targetStatus) {
                 $sourceIds = $this->idsForStatus($applications, $sourceStatus, $lockedApplication->id);
                 $this->persistOrder($sourceIds, $sourceStatus);
+
+                $lockedApplication->statusEvents()->create([
+                    'from_status' => $sourceStatus,
+                    'to_status' => $targetStatus,
+                    'changed_at' => now(),
+                ]);
             }
         }, attempts: 3);
     }

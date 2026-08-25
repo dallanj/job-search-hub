@@ -12,6 +12,7 @@ use App\Models\JobApplication;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -63,17 +64,27 @@ class JobApplicationController extends Controller
      */
     public function store(StoreJobApplicationRequest $request): RedirectResponse
     {
-        $data = $request->safe()->except(['company_name']);
-        $data['company_id'] = $this->companyFor($request)->id;
-        $data['salary_currency'] = isset($data['salary_currency'])
-            ? Str::upper($data['salary_currency'])
-            : null;
-        $lastPosition = $request->user()->jobApplications()
-            ->where('status', $data['status'])
-            ->max('sort_order');
-        $data['sort_order'] = $lastPosition === null ? 0 : ((int) $lastPosition) + 1;
+        $application = DB::transaction(function () use ($request): JobApplication {
+            $data = $request->safe()->except(['company_name']);
+            $data['company_id'] = $this->companyFor($request)->id;
+            $data['salary_currency'] = isset($data['salary_currency'])
+                ? Str::upper($data['salary_currency'])
+                : null;
+            $lastPosition = $request->user()->jobApplications()
+                ->where('status', $data['status'])
+                ->lockForUpdate()
+                ->max('sort_order');
+            $data['sort_order'] = $lastPosition === null ? 0 : ((int) $lastPosition) + 1;
 
-        $application = $request->user()->jobApplications()->create($data);
+            $application = $request->user()->jobApplications()->create($data);
+            $application->statusEvents()->create([
+                'from_status' => null,
+                'to_status' => $application->status,
+                'changed_at' => now(),
+            ]);
+
+            return $application;
+        }, attempts: 3);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application created.')]);
 
@@ -88,7 +99,13 @@ class JobApplicationController extends Controller
         Gate::authorize('view', $application);
 
         return Inertia::render('applications/Show', [
-            'application' => $application->load('company:id,name,website'),
+            'application' => $application->load([
+                'company:id,name,website',
+                'statusEvents' => fn ($query) => $query
+                    ->select(['id', 'job_application_id', 'from_status', 'to_status', 'changed_at', 'note'])
+                    ->latest('changed_at')
+                    ->latest('id'),
+            ]),
             'statuses' => $this->statuses(),
         ]);
     }

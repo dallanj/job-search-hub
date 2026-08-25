@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApplicationStatus;
+use App\Models\ApplicationStatusEvent;
 use App\Models\Company;
 use App\Models\JobApplication;
 use App\Models\User;
@@ -102,6 +103,11 @@ test('a user can create an application for an existing company', function () {
         'role_title' => 'Senior Laravel Developer',
         'salary_currency' => 'CAD',
     ]);
+    $this->assertDatabaseHas('application_status_events', [
+        'job_application_id' => $application->id,
+        'from_status' => null,
+        'to_status' => ApplicationStatus::Applied->value,
+    ]);
 });
 
 test('a user can create a company while creating an application', function () {
@@ -183,16 +189,48 @@ test('a user can view and update their application', function () {
         'role_title' => 'Staff Laravel Developer',
         'status' => ApplicationStatus::Interview->value,
     ]);
+    $this->assertDatabaseHas('application_status_events', [
+        'job_application_id' => $application->id,
+        'from_status' => ApplicationStatus::Saved->value,
+        'to_status' => ApplicationStatus::Interview->value,
+    ]);
+});
+
+test('the application detail displays status history newest first', function () {
+    $user = User::factory()->create();
+    $application = JobApplication::factory()->for($user)->create();
+    $olderEvent = ApplicationStatusEvent::factory()->for($application)->create([
+        'from_status' => null,
+        'to_status' => ApplicationStatus::Saved,
+        'changed_at' => '2026-08-20 09:00:00',
+    ]);
+    $newerEvent = ApplicationStatusEvent::factory()->for($application)->create([
+        'from_status' => ApplicationStatus::Saved,
+        'to_status' => ApplicationStatus::Applied,
+        'changed_at' => '2026-08-21 10:00:00',
+        'note' => 'Submitted through the company website.',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('applications.show', $application));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('applications/Show')
+        ->has('application.status_events', 2)
+        ->where('application.status_events.0.id', $newerEvent->id)
+        ->where('application.status_events.0.note', 'Submitted through the company website.')
+        ->where('application.status_events.1.id', $olderEvent->id));
 });
 
 test('a user can delete their application', function () {
     $user = User::factory()->create();
     $application = JobApplication::factory()->for($user)->create();
+    $event = ApplicationStatusEvent::factory()->for($application)->create();
 
     $response = $this->actingAs($user)->delete(route('applications.destroy', $application));
 
     $response->assertRedirect(route('applications.index'));
     $this->assertModelMissing($application);
+    $this->assertModelMissing($event);
 });
 
 test('another users application returns 404 for every record endpoint', function (string $method, string $routeName) {
