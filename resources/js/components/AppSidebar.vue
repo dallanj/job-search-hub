@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
     BriefcaseBusiness,
+    Columns3,
     FolderGit2,
     LayoutGrid,
 } from '@lucide/vue';
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as applicationsIndex } from '@/routes/applications';
+import { index as pipelineIndex } from '@/routes/pipeline';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -33,6 +35,11 @@ const mainNavItems: NavItem[] = [
         title: 'Applications',
         href: applicationsIndex(),
         icon: BriefcaseBusiness,
+    },
+    {
+        title: 'Pipeline',
+        href: pipelineIndex(),
+        icon: Columns3,
     },
 ];
 

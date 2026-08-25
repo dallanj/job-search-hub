@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\MoveJobApplication;
 use App\Enums\ApplicationStatus;
 use App\Http\Requests\IndexJobApplicationRequest;
 use App\Http\Requests\StoreJobApplicationRequest;
@@ -67,6 +68,10 @@ class JobApplicationController extends Controller
         $data['salary_currency'] = isset($data['salary_currency'])
             ? Str::upper($data['salary_currency'])
             : null;
+        $lastPosition = $request->user()->jobApplications()
+            ->where('status', $data['status'])
+            ->max('sort_order');
+        $data['sort_order'] = $lastPosition === null ? 0 : ((int) $lastPosition) + 1;
 
         $application = $request->user()->jobApplications()->create($data);
 
@@ -104,15 +109,24 @@ class JobApplicationController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateJobApplicationRequest $request, JobApplication $application): RedirectResponse
-    {
+    public function update(
+        UpdateJobApplicationRequest $request,
+        JobApplication $application,
+        MoveJobApplication $moveJobApplication,
+    ): RedirectResponse {
         $data = $request->safe()->except(['company_name']);
+        $targetStatus = ApplicationStatus::from($data['status']);
+        unset($data['status']);
         $data['company_id'] = $this->companyFor($request)->id;
         $data['salary_currency'] = isset($data['salary_currency'])
             ? Str::upper($data['salary_currency'])
             : null;
 
         $application->update($data);
+
+        if ($application->status !== $targetStatus) {
+            $moveJobApplication->handle($application, $targetStatus, PHP_INT_MAX);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Application updated.')]);
 

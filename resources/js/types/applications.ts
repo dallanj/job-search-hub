@@ -54,3 +54,21 @@ export type Paginated<T> = {
     total: number;
     links: PaginationLink[];
 };
+
+export type PipelineApplication = {
+    id: number;
+    company_id: number;
+    role_title: string;
+    status: ApplicationStatus;
+    sort_order: number;
+    location: string | null;
+    workplace_type: string | null;
+    applied_at: string | null;
+    company: CompanyOption;
+};
+
+export type PipelineColumn = {
+    status: ApplicationStatus;
+    label: string;
+    applications: PipelineApplication[];
+};
