@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Link } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,7 @@ const props = withDefaults(
 const applicationId = ref(
     props.interview?.job_application_id ?? props.selectedApplicationId ?? '',
 );
+const contactId = ref<number | ''>(props.interview?.contact_id ?? '');
 const selectedApplication = computed(() =>
     props.applications.find((item) => item.id === Number(applicationId.value)),
 );
@@ -40,6 +41,17 @@ const availableContacts = computed(() =>
             contact.company_id === selectedApplication.value?.company_id,
     ),
 );
+
+watch(applicationId, () => {
+    if (
+        contactId.value !== '' &&
+        !availableContacts.value.some(
+            (contact) => contact.id === Number(contactId.value),
+        )
+    ) {
+        contactId.value = '';
+    }
+});
 </script>
 
 <template>
@@ -104,9 +116,15 @@ const availableContacts = computed(() =>
                     id="contact_id"
                     name="contact_id"
                     class="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
-                    :value="interview?.contact_id ?? ''"
+                    v-model="contactId"
                 >
-                    <option value="">Not known yet</option>
+                    <option value="">
+                        {{
+                            selectedApplication
+                                ? 'Not known yet'
+                                : 'Select an application first'
+                        }}
+                    </option>
                     <option
                         v-for="contact in availableContacts"
                         :key="contact.id"
@@ -116,6 +134,13 @@ const availableContacts = computed(() =>
                         }}{{
                             contact.job_title ? ` — ${contact.job_title}` : ''
                         }}
+                    </option>
+                    <option
+                        v-if="selectedApplication && !availableContacts.length"
+                        value=""
+                        disabled
+                    >
+                        No contacts for this company
                     </option></select
                 ><InputError :message="errors.contact_id" />
             </div>

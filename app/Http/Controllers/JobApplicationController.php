@@ -112,6 +112,9 @@ class JobApplicationController extends Controller
                     ->orderBy('completed_at')
                     ->orderByDesc('priority')
                     ->orderBy('due_at'),
+                'notes' => fn ($query) => $query
+                    ->with('user:id,name')
+                    ->latest(),
             ]),
             'statuses' => $this->statuses(),
         ]);

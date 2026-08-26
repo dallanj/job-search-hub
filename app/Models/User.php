@@ -59,6 +59,12 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(Contact::class);
     }
 
+    /** @return HasMany<ApplicationNote, $this> */
+    public function applicationNotes(): HasMany
+    {
+        return $this->hasMany(ApplicationNote::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *
