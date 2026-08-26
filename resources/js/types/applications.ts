@@ -40,6 +40,26 @@ export type JobApplication = {
     status_events?: ApplicationStatusEvent[];
     interviews?: Interview[];
     tasks?: FollowUpTask[];
+    notes?: ApplicationNote[];
+};
+
+export type ApplicationNote = {
+    id: number;
+    job_application_id: number;
+    user_id: number;
+    body: string;
+    created_at: string;
+    updated_at: string;
+    user: {
+        id: number;
+        name: string;
+    };
+    job_application?: {
+        id: number;
+        company_id: number;
+        role_title: string;
+        company: CompanyOption;
+    };
 };
 
 export type ApplicationStatusEvent = {

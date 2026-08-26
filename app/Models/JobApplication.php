@@ -103,6 +103,12 @@ class JobApplication extends Model implements Searchable
         return $this->hasMany(Task::class);
     }
 
+    /** @return HasMany<ApplicationNote, $this> */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ApplicationNote::class);
+    }
+
     /**
      * @return list<SearchField|SearchRelation>
      */

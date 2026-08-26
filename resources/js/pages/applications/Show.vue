@@ -8,7 +8,13 @@ import {
     Pencil,
     Trash2,
 } from '@lucide/vue';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import {
+    destroy as destroyNote,
+    edit as editNote,
+    store as storeNote,
+} from '@/routes/application-notes';
 import { destroy, edit, index } from '@/routes/applications';
 import {
     create as createInterview,
@@ -69,6 +75,7 @@ const salary = (): string => {
 };
 
 const confirmDelete = (): boolean => window.confirm('Delete this application?');
+const confirmDeleteNote = (): boolean => window.confirm('Delete this note?');
 </script>
 
 <template>
@@ -171,6 +178,91 @@ const confirmDelete = (): boolean => window.confirm('Delete this application?');
                 {{ application.description }}
             </p>
         </div>
+
+        <section class="rounded-xl border p-5">
+            <div>
+                <h2 class="font-medium">Application notes</h2>
+                <p class="mt-1 text-sm text-muted-foreground">
+                    Keep research, impressions, and context together.
+                </p>
+            </div>
+
+            <Form
+                :action="storeNote.url()"
+                method="post"
+                reset-on-success
+                class="mt-5 space-y-2"
+                v-slot="{ errors, processing }"
+            >
+                <input
+                    type="hidden"
+                    name="job_application_id"
+                    :value="application.id"
+                />
+                <textarea
+                    name="body"
+                    rows="4"
+                    class="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                    placeholder="Add research, a call summary, or anything worth remembering…"
+                    required
+                />
+                <InputError :message="errors.body" />
+                <div class="flex justify-end">
+                    <Button size="sm" :disabled="processing">
+                        {{ processing ? 'Adding…' : 'Add note' }}
+                    </Button>
+                </div>
+            </Form>
+
+            <div v-if="application.notes?.length" class="mt-5 space-y-4">
+                <article
+                    v-for="note in application.notes"
+                    :key="note.id"
+                    class="rounded-lg border bg-muted/20 p-4"
+                >
+                    <p class="text-sm whitespace-pre-wrap">{{ note.body }}</p>
+                    <div
+                        class="mt-3 flex flex-wrap items-center justify-between gap-2"
+                    >
+                        <p class="text-xs text-muted-foreground">
+                            {{ note.user.name }} ·
+                            {{ formatDateTime(note.created_at) }}
+                            <span v-if="note.updated_at !== note.created_at">
+                                · edited
+                            </span>
+                        </p>
+                        <div class="flex gap-1">
+                            <Button size="icon" variant="ghost" as-child>
+                                <Link
+                                    :href="editNote(note)"
+                                    aria-label="Edit note"
+                                >
+                                    <Pencil class="size-4" />
+                                </Link>
+                            </Button>
+                            <Form
+                                :action="destroyNote.url(note)"
+                                method="delete"
+                                v-slot="{ processing }"
+                                @before="confirmDeleteNote"
+                            >
+                                <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    :disabled="processing"
+                                    aria-label="Delete note"
+                                >
+                                    <Trash2 class="size-4" />
+                                </Button>
+                            </Form>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <p v-else class="mt-5 text-sm text-muted-foreground">
+                No notes added yet.
+            </p>
+        </section>
 
         <section class="rounded-xl border p-5">
             <div>
