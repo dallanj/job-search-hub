@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApplicationNoteController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InterviewController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\MoveJobApplicationController;
@@ -19,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 Route::inertia('/', 'Welcome')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::get('pipeline', PipelineController::class)->name('pipeline.index');
     Route::get('upcoming-actions', UpcomingActionController::class)->name('upcoming-actions.index');
 
