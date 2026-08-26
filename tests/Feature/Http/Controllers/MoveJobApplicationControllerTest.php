@@ -162,3 +162,24 @@ test('another users application returns 404', function () {
 
     $response->assertNotFound();
 });
+
+test('moving an application returns to the filtered pipeline URL', function () {
+    $user = User::factory()->create();
+    $application = JobApplication::factory()->for($user)->create([
+        'role_title' => 'Platform Developer',
+        'status' => ApplicationStatus::Applied,
+    ]);
+    $filteredPipelineUrl = route('pipeline.index', [
+        'search' => 'Developer',
+        'location' => 'Edmonton',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from($filteredPipelineUrl)
+        ->patch(route('pipeline.move', $application), [
+            'status' => ApplicationStatus::Interview->value,
+            'position' => 999,
+        ]);
+
+    $response->assertRedirect($filteredPipelineUrl);
+});
