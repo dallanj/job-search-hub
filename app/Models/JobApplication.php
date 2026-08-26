@@ -2,7 +2,11 @@
 
 namespace App\Models;
 
+use App\Concerns\HasSearchableFields;
+use App\Contracts\Searchable;
 use App\Enums\ApplicationStatus;
+use App\Search\SearchField;
+use App\Search\SearchRelation;
 use Database\Factories\JobApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,10 +54,12 @@ use Illuminate\Support\Carbon;
     'closed_at',
     'description',
 ])]
-class JobApplication extends Model
+class JobApplication extends Model implements Searchable
 {
     /** @use HasFactory<JobApplicationFactory> */
     use HasFactory;
+
+    use HasSearchableFields;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -83,6 +89,17 @@ class JobApplication extends Model
     public function statusEvents(): HasMany
     {
         return $this->hasMany(ApplicationStatusEvent::class);
+    }
+
+    /**
+     * @return list<SearchField|SearchRelation>
+     */
+    public function searchableFields(): array
+    {
+        return [
+            $this->searchField('role_title'),
+            $this->searchRelation('company', 'name'),
+        ];
     }
 
     /**
