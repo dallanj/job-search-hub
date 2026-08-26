@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\MoveJobApplicationController;
 use App\Http\Controllers\PipelineController;
+use App\Models\Contact;
 use App\Models\JobApplication;
 use Illuminate\Support\Facades\Route;
 
@@ -15,8 +17,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::bind('application', fn (string $value): JobApplication => request()->user()
         ->jobApplications()
         ->findOrFail($value));
+    Route::bind('contact', fn (string $value): Contact => request()->user()
+        ->contacts()
+        ->findOrFail($value));
 
     Route::resource('applications', JobApplicationController::class);
+    Route::resource('contacts', ContactController::class);
     Route::patch('pipeline/applications/{application}', MoveJobApplicationController::class)
         ->name('pipeline.move');
 });

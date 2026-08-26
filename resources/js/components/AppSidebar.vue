@@ -4,6 +4,7 @@ import {
     BookOpen,
     BriefcaseBusiness,
     Columns3,
+    ContactRound,
     FolderGit2,
     LayoutGrid,
 } from '@lucide/vue';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as applicationsIndex } from '@/routes/applications';
+import { index as contactsIndex } from '@/routes/contacts';
 import { index as pipelineIndex } from '@/routes/pipeline';
 import type { NavItem } from '@/types';
 
@@ -40,6 +42,11 @@ const mainNavItems: NavItem[] = [
         title: 'Pipeline',
         href: pipelineIndex(),
         icon: Columns3,
+    },
+    {
+        title: 'Contacts',
+        href: contactsIndex(),
+        icon: ContactRound,
     },
 ];
 
