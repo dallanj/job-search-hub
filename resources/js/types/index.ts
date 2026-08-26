@@ -4,4 +4,5 @@ export * from './contacts';
 export * from './interviews';
 export * from './navigation';
 export * from './tasks';
+export * from './upcoming-actions';
 export * from './ui';
