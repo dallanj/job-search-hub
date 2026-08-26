@@ -2,6 +2,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
+    Check,
     CircleDot,
     ExternalLink,
     Pencil,
@@ -13,6 +14,11 @@ import {
     create as createInterview,
     show as showInterview,
 } from '@/routes/interviews';
+import {
+    completion as taskCompletion,
+    create as createTask,
+    show as showTask,
+} from '@/routes/tasks';
 import type { JobApplication, StatusOption } from '@/types';
 
 const props = defineProps<{
@@ -217,6 +223,79 @@ const confirmDelete = (): boolean => window.confirm('Delete this application?');
 
             <p v-else class="mt-5 text-sm text-muted-foreground">
                 Status tracking begins with the next stage change.
+            </p>
+        </section>
+
+        <section class="rounded-xl border p-5">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="font-medium">Follow-up tasks</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Next actions connected to this application.
+                    </p>
+                </div>
+                <Button size="sm" variant="outline" as-child>
+                    <Link
+                        :href="
+                            createTask({
+                                query: { application: application.id },
+                            })
+                        "
+                    >
+                        Add task
+                    </Link>
+                </Button>
+            </div>
+            <div v-if="application.tasks?.length" class="mt-4 divide-y">
+                <div
+                    v-for="task in application.tasks"
+                    :key="task.id"
+                    class="flex items-center gap-2 py-3"
+                >
+                    <Form
+                        :action="taskCompletion.url(task)"
+                        method="patch"
+                        v-slot="{ processing }"
+                    >
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            class="size-8 rounded-full"
+                            :disabled="processing"
+                            :aria-label="
+                                task.completed_at
+                                    ? 'Reopen task'
+                                    : 'Complete task'
+                            "
+                        >
+                            <Check
+                                v-if="task.completed_at"
+                                class="size-5 text-primary"
+                            />
+                            <CircleDot v-else class="size-5" />
+                        </Button>
+                    </Form>
+                    <Link
+                        :href="showTask(task)"
+                        class="min-w-0 flex-1 text-sm hover:underline"
+                        :class="{
+                            'text-muted-foreground line-through':
+                                task.completed_at,
+                        }"
+                    >
+                        {{ task.title }}
+                    </Link>
+                    <time
+                        v-if="task.due_at"
+                        :datetime="task.due_at"
+                        class="text-xs text-muted-foreground"
+                    >
+                        {{ task.due_at.slice(0, 10) }}
+                    </time>
+                </div>
+            </div>
+            <p v-else class="mt-4 text-sm text-muted-foreground">
+                No follow-up tasks yet.
             </p>
         </section>
 
