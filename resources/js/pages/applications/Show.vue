@@ -9,6 +9,10 @@ import {
 } from '@lucide/vue';
 import { Button } from '@/components/ui/button';
 import { destroy, edit, index } from '@/routes/applications';
+import {
+    create as createInterview,
+    show as showInterview,
+} from '@/routes/interviews';
 import type { JobApplication, StatusOption } from '@/types';
 
 const props = defineProps<{
@@ -213,6 +217,49 @@ const confirmDelete = (): boolean => window.confirm('Delete this application?');
 
             <p v-else class="mt-5 text-sm text-muted-foreground">
                 Status tracking begins with the next stage change.
+            </p>
+        </section>
+
+        <section class="rounded-xl border p-5">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <h2 class="font-medium">Interviews</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        Scheduled conversations for this application.
+                    </p>
+                </div>
+                <Button size="sm" variant="outline" as-child
+                    ><Link
+                        :href="
+                            createInterview({
+                                query: { application: application.id },
+                            })
+                        "
+                        >Schedule</Link
+                    ></Button
+                >
+            </div>
+            <div v-if="application.interviews?.length" class="mt-4 divide-y">
+                <Link
+                    v-for="interview in application.interviews"
+                    :key="interview.id"
+                    :href="showInterview(interview)"
+                    class="flex items-center justify-between gap-3 py-3 text-sm hover:underline"
+                    ><span
+                        >{{ labelForStatus(interview.type) }} interview<span
+                            v-if="interview.contact"
+                        >
+                            with {{ interview.contact.name }}</span
+                        ></span
+                    ><time
+                        :datetime="interview.scheduled_at"
+                        class="text-muted-foreground"
+                        >{{ formatDateTime(interview.scheduled_at) }}</time
+                    ></Link
+                >
+            </div>
+            <p v-else class="mt-4 text-sm text-muted-foreground">
+                No interviews scheduled yet.
             </p>
         </section>
 

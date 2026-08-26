@@ -38,6 +38,7 @@ export type JobApplication = {
     created_at: string;
     company: CompanyOption;
     status_events?: ApplicationStatusEvent[];
+    interviews?: Interview[];
 };
 
 export type ApplicationStatusEvent = {
@@ -89,3 +90,4 @@ export type PipelineFilters = {
     date_from: string | null;
     date_to: string | null;
 };
+import type { Interview } from './interviews';

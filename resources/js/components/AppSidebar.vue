@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3';
 import {
     BookOpen,
     BriefcaseBusiness,
+    CalendarDays,
     Columns3,
     ContactRound,
     FolderGit2,
@@ -24,6 +25,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as applicationsIndex } from '@/routes/applications';
 import { index as contactsIndex } from '@/routes/contacts';
+import { index as interviewsIndex } from '@/routes/interviews';
 import { index as pipelineIndex } from '@/routes/pipeline';
 import type { NavItem } from '@/types';
 
@@ -47,6 +49,11 @@ const mainNavItems: NavItem[] = [
         title: 'Contacts',
         href: contactsIndex(),
         icon: ContactRound,
+    },
+    {
+        title: 'Interviews',
+        href: interviewsIndex(),
+        icon: CalendarDays,
     },
 ];
 
