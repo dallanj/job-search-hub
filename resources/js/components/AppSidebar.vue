@@ -4,6 +4,7 @@ import {
     BookOpen,
     BriefcaseBusiness,
     CalendarDays,
+    CheckSquare2,
     Columns3,
     ContactRound,
     FolderGit2,
@@ -27,6 +28,7 @@ import { index as applicationsIndex } from '@/routes/applications';
 import { index as contactsIndex } from '@/routes/contacts';
 import { index as interviewsIndex } from '@/routes/interviews';
 import { index as pipelineIndex } from '@/routes/pipeline';
+import { index as tasksIndex } from '@/routes/tasks';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -54,6 +56,11 @@ const mainNavItems: NavItem[] = [
         title: 'Interviews',
         href: interviewsIndex(),
         icon: CalendarDays,
+    },
+    {
+        title: 'Tasks',
+        href: tasksIndex(),
+        icon: CheckSquare2,
     },
 ];
 

@@ -108,6 +108,10 @@ class JobApplicationController extends Controller
                 'interviews' => fn ($query) => $query
                     ->with('contact:id,name')
                     ->orderBy('scheduled_at'),
+                'tasks' => fn ($query) => $query
+                    ->orderBy('completed_at')
+                    ->orderByDesc('priority')
+                    ->orderBy('due_at'),
             ]),
             'statuses' => $this->statuses(),
         ]);
