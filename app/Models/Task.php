@@ -14,7 +14,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
-/** @property int $id @property int $job_application_id @property string $title @property Carbon|null $due_at @property Carbon|null $completed_at @property TaskPriority $priority */
+/**
+ * @property int $id
+ * @property int $job_application_id
+ * @property string $title
+ * @property Carbon|null $due_at
+ * @property Carbon|null $completed_at
+ * @property TaskPriority $priority
+ */
 #[Fillable(['job_application_id', 'title', 'due_at', 'completed_at', 'priority'])]
 class Task extends Model implements Searchable
 {

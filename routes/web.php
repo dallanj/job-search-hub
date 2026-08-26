@@ -8,6 +8,7 @@ use App\Http\Controllers\MoveJobApplicationController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ToggleTaskCompletionController;
+use App\Http\Controllers\UpcomingActionController;
 use App\Models\ApplicationNote;
 use App\Models\Contact;
 use App\Models\Interview;
@@ -20,6 +21,7 @@ Route::inertia('/', 'Welcome')->name('home');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'Dashboard')->name('dashboard');
     Route::get('pipeline', PipelineController::class)->name('pipeline.index');
+    Route::get('upcoming-actions', UpcomingActionController::class)->name('upcoming-actions.index');
 
     Route::bind('application', fn (string $value): JobApplication => request()->user()
         ->jobApplications()
