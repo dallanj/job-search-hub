@@ -105,6 +105,9 @@ class JobApplicationController extends Controller
                     ->select(['id', 'job_application_id', 'from_status', 'to_status', 'changed_at', 'note'])
                     ->latest('changed_at')
                     ->latest('id'),
+                'interviews' => fn ($query) => $query
+                    ->with('contact:id,name')
+                    ->orderBy('scheduled_at'),
             ]),
             'statuses' => $this->statuses(),
         ]);

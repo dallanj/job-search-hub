@@ -91,6 +91,12 @@ class JobApplication extends Model implements Searchable
         return $this->hasMany(ApplicationStatusEvent::class);
     }
 
+    /** @return HasMany<Interview, $this> */
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
+
     /**
      * @return list<SearchField|SearchRelation>
      */
