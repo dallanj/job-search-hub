@@ -81,3 +81,11 @@ export type PipelineColumn = {
     label: string;
     applications: PipelineApplication[];
 };
+
+export type PipelineFilters = {
+    search: string | null;
+    company_id: number | null;
+    location: string | null;
+    date_from: string | null;
+    date_to: string | null;
+};

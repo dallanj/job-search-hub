@@ -7,6 +7,7 @@ defineProps<{
     columnIndex: number;
     columnCount: number;
     disabled: boolean;
+    allowReordering: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -44,8 +45,11 @@ const emit = defineEmits<{
             >
                 <ApplicationCard
                     :application="application"
-                    :is-first="index === 0"
-                    :is-last="index === column.applications.length - 1"
+                    :is-first="!allowReordering || index === 0"
+                    :is-last="
+                        !allowReordering ||
+                        index === column.applications.length - 1
+                    "
                     :has-previous-column="columnIndex > 0"
                     :has-next-column="columnIndex < columnCount - 1"
                     :disabled="disabled"
