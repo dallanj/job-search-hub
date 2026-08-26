@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
-import { List, Plus } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Filter, List, Plus, Search, X } from '@lucide/vue';
+import { computed, reactive, ref, watch } from 'vue';
 import KanbanColumn from '@/components/pipeline/KanbanColumn.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { create, index as applicationsIndex } from '@/routes/applications';
 import { index, move } from '@/routes/pipeline';
 import type {
     ApplicationStatus,
+    CompanyOption,
     PipelineApplication,
     PipelineColumn,
+    PipelineFilters,
 } from '@/types';
 
-const props = defineProps<{ columns: PipelineColumn[] }>();
+const props = defineProps<{
+    columns: PipelineColumn[];
+    companies: CompanyOption[];
+    filters: PipelineFilters;
+}>();
 
 defineOptions({
     layout: {
@@ -32,11 +40,67 @@ const cloneColumns = (columns: PipelineColumn[]): PipelineColumn[] =>
 const board = ref(cloneColumns(props.columns));
 const draggedApplicationId = ref<number | null>(null);
 const processing = ref(false);
+const filterValues = reactive({
+    search: props.filters.search ?? '',
+    company_id: props.filters.company_id?.toString() ?? '',
+    location: props.filters.location ?? '',
+    date_from: props.filters.date_from ?? '',
+    date_to: props.filters.date_to ?? '',
+});
+
+const activeFilters = computed(() => {
+    const filters: string[] = [];
+
+    if (props.filters.search) {
+        filters.push(`Search: ${props.filters.search}`);
+    }
+
+    if (props.filters.company_id) {
+        const company = props.companies.find(
+            (company) => company.id === props.filters.company_id,
+        );
+        filters.push(`Company: ${company?.name ?? props.filters.company_id}`);
+    }
+
+    if (props.filters.location) {
+        filters.push(`Location: ${props.filters.location}`);
+    }
+
+    if (props.filters.date_from) {
+        filters.push(`From: ${props.filters.date_from}`);
+    }
+
+    if (props.filters.date_to) {
+        filters.push(`To: ${props.filters.date_to}`);
+    }
+
+    return filters;
+});
+
+const hasActiveFilters = computed(() => activeFilters.value.length > 0);
+const matchingApplicationCount = computed(() =>
+    board.value.reduce(
+        (count, column) => count + column.applications.length,
+        0,
+    ),
+);
 
 watch(
     () => props.columns,
     (columns) => {
         board.value = cloneColumns(columns);
+    },
+    { deep: true },
+);
+
+watch(
+    () => props.filters,
+    (filters) => {
+        filterValues.search = filters.search ?? '';
+        filterValues.company_id = filters.company_id?.toString() ?? '';
+        filterValues.location = filters.location ?? '';
+        filterValues.date_from = filters.date_from ?? '';
+        filterValues.date_to = filters.date_to ?? '';
     },
     { deep: true },
 );
@@ -97,6 +161,12 @@ const moveApplication = (
         return;
     }
 
+    if (hasActiveFilters.value && source.columnIndex === targetColumnIndex) {
+        draggedApplicationId.value = null;
+
+        return;
+    }
+
     const snapshot = cloneColumns(board.value);
     const sourceColumn = board.value[source.columnIndex];
     const [application] = sourceColumn.applications.splice(
@@ -132,7 +202,12 @@ const moveApplication = (
         item.sort_order = index;
     });
 
-    persistMove(application, targetColumn.status, position, snapshot);
+    persistMove(
+        application,
+        targetColumn.status,
+        hasActiveFilters.value ? Number.MAX_SAFE_INTEGER : position,
+        snapshot,
+    );
 };
 
 const dropAt = (targetColumnIndex: number, targetPosition: number): void => {
@@ -222,6 +297,113 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
             </div>
         </div>
 
+        <Form
+            :action="index.url()"
+            method="get"
+            class="grid gap-3 rounded-xl border p-4 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1.5fr)_minmax(11rem,1fr)_minmax(11rem,1fr)_minmax(9rem,0.8fr)_minmax(9rem,0.8fr)_auto]"
+            v-slot="{ processing: filtering }"
+        >
+            <label class="grid gap-1.5 text-xs font-medium">
+                Search
+                <span class="relative">
+                    <Search
+                        class="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground"
+                    />
+                    <Input
+                        v-model="filterValues.search"
+                        name="search"
+                        class="pl-9"
+                        placeholder="Role or company"
+                    />
+                </span>
+            </label>
+            <label class="grid gap-1.5 text-xs font-medium">
+                Company
+                <select
+                    v-model="filterValues.company_id"
+                    name="company_id"
+                    class="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-normal shadow-xs"
+                >
+                    <option value="">All companies</option>
+                    <option
+                        v-for="company in companies"
+                        :key="company.id"
+                        :value="company.id"
+                    >
+                        {{ company.name }}
+                    </option>
+                </select>
+            </label>
+            <label class="grid gap-1.5 text-xs font-medium">
+                Location
+                <Input
+                    v-model="filterValues.location"
+                    name="location"
+                    placeholder="City or region"
+                />
+            </label>
+            <label class="grid gap-1.5 text-xs font-medium">
+                Applied from
+                <Input
+                    v-model="filterValues.date_from"
+                    name="date_from"
+                    type="date"
+                />
+            </label>
+            <label class="grid gap-1.5 text-xs font-medium">
+                Applied to
+                <Input
+                    v-model="filterValues.date_to"
+                    name="date_to"
+                    type="date"
+                />
+            </label>
+            <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-1">
+                <Button type="submit" variant="secondary" :disabled="filtering">
+                    <Filter class="size-4" />
+                    Filter
+                </Button>
+                <Button
+                    v-if="hasActiveFilters"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    as-child
+                >
+                    <Link :href="index()" aria-label="Clear all filters">
+                        <X class="size-4" />
+                    </Link>
+                </Button>
+            </div>
+        </Form>
+
+        <div v-if="hasActiveFilters" class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-muted-foreground">Active filters:</span>
+            <Badge
+                v-for="filter in activeFilters"
+                :key="filter"
+                variant="secondary"
+            >
+                {{ filter }}
+            </Badge>
+            <Button variant="link" size="sm" class="h-auto px-1" as-child>
+                <Link :href="index()">Clear all</Link>
+            </Button>
+            <span class="text-xs text-muted-foreground">
+                Moves append to the target stage; clear filters to reorder.
+            </span>
+        </div>
+
+        <div
+            v-if="hasActiveFilters && matchingApplicationCount === 0"
+            class="rounded-xl border border-dashed p-6 text-center"
+        >
+            <h2 class="font-medium">No matching applications</h2>
+            <p class="mt-1 text-sm text-muted-foreground">
+                Adjust the filters or clear them to see the full pipeline.
+            </p>
+        </div>
+
         <div
             class="flex min-h-0 flex-1 gap-4 overflow-x-auto pb-3"
             aria-label="Application pipeline"
@@ -233,6 +415,7 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
                 :column-index="columnIndex"
                 :column-count="board.length"
                 :disabled="processing"
+                :allow-reordering="!hasActiveFilters"
                 @drag-start="draggedApplicationId = $event"
                 @drop-at="dropAt(columnIndex, $event)"
                 @move-up="moveUp"
