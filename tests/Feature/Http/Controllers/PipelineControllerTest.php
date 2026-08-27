@@ -151,3 +151,21 @@ test('the pipeline rejects another users company filter', function () {
     $response->assertRedirect(route('pipeline.index'));
     $response->assertSessionHasErrors('company_id');
 });
+
+test('the pipeline gives every tracker status its own labelled column', function (ApplicationStatus $status, string $label, int $columnIndex) {
+    $user = User::factory()->create();
+    $application = JobApplication::factory()->for($user)->create(['status' => $status]);
+
+    $response = $this->actingAs($user)->get(route('pipeline.index'));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('pipeline/Index')
+        ->where("columns.{$columnIndex}.status", $status->value)
+        ->where("columns.{$columnIndex}.label", $label)
+        ->has("columns.{$columnIndex}.applications", 1)
+        ->where("columns.{$columnIndex}.applications.0.id", $application->id));
+})->with([
+    'hired' => [ApplicationStatus::Hired, 'Hired', 5],
+    'no response' => [ApplicationStatus::NoResponse, 'No Response', 7],
+    'offer declined' => [ApplicationStatus::OfferDeclined, 'Offer Declined', 8],
+]);

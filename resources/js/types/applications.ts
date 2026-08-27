@@ -4,7 +4,10 @@ export type ApplicationStatus =
     | 'screening'
     | 'interview'
     | 'offer'
+    | 'hired'
     | 'rejected'
+    | 'no_response'
+    | 'offer_declined'
     | 'withdrawn'
     | 'archived';
 
@@ -34,7 +37,10 @@ export type JobApplication = {
     salary_currency: string | null;
     applied_at: string | null;
     closed_at: string | null;
+    deadline: string | null;
     description: string | null;
+    cv_file_path: string | null;
+    cover_letter_file_path: string | null;
     created_at: string;
     company: CompanyOption;
     status_events?: ApplicationStatusEvent[];

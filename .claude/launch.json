@@ -1,0 +1,12 @@
+{
+    "version": "0.0.1",
+    "configurations": [
+        {
+            "name": "job-search-hub",
+            "runtimeExecutable": "sh",
+            "runtimeArgs": ["-c", "php artisan serve --host=127.0.0.1 --port=${PORT:-8000}"],
+            "port": 8000,
+            "autoPort": true
+        }
+    ]
+}

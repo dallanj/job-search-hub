@@ -11,6 +11,21 @@ use LogicException;
 
 class BuildDashboard
 {
+    /**
+     * Statuses that close an application: it is no longer worked, so it neither
+     * counts as active nor needs a next action.
+     *
+     * @var list<ApplicationStatus>
+     */
+    private const CLOSED_STATUSES = [
+        ApplicationStatus::Hired,
+        ApplicationStatus::Rejected,
+        ApplicationStatus::NoResponse,
+        ApplicationStatus::OfferDeclined,
+        ApplicationStatus::Withdrawn,
+        ApplicationStatus::Archived,
+    ];
+
     public function __construct(private readonly GetUpcomingActions $getUpcomingActions) {}
 
     /** @return array<string, mixed> */
@@ -44,11 +59,7 @@ class BuildDashboard
 
         return [
             'summary' => [
-                'active_applications' => $applications->whereNotIn('status', [
-                    ApplicationStatus::Rejected,
-                    ApplicationStatus::Withdrawn,
-                    ApplicationStatus::Archived,
-                ])->count(),
+                'active_applications' => $applications->whereNotIn('status', self::CLOSED_STATUSES)->count(),
                 'applications_this_week' => $thisWeek,
                 'applications_week_change' => $thisWeek - $lastWeek,
                 'interview_rate' => $this->percentage($interviewed, $applied->count()),
@@ -87,11 +98,7 @@ class BuildDashboard
             )->count(),
             'saved_not_applied' => $applications->where('status', ApplicationStatus::Saved)->count(),
             'without_upcoming_action' => $applications->filter(
-                fn (JobApplication $application): bool => ! in_array($application->status, [
-                    ApplicationStatus::Rejected,
-                    ApplicationStatus::Withdrawn,
-                    ApplicationStatus::Archived,
-                ], true)
+                fn (JobApplication $application): bool => ! in_array($application->status, self::CLOSED_STATUSES, true)
                     && ! $application->tasks->contains(fn ($task): bool => $task->completed_at === null)
                     && ! $application->interviews->contains(fn ($interview): bool => $interview->scheduled_at->gte(now())),
             )->count(),

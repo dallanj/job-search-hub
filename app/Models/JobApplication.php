@@ -32,7 +32,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $salary_currency
  * @property Carbon|null $applied_at
  * @property Carbon|null $closed_at
+ * @property Carbon|null $deadline
  * @property string|null $description
+ * @property string|null $cv_file_path
+ * @property string|null $cover_letter_file_path
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -52,7 +55,10 @@ use Illuminate\Support\Carbon;
     'salary_currency',
     'applied_at',
     'closed_at',
+    'deadline',
     'description',
+    'cv_file_path',
+    'cover_letter_file_path',
 ])]
 class JobApplication extends Model implements Searchable
 {
@@ -132,6 +138,7 @@ class JobApplication extends Model implements Searchable
             'salary_max' => 'integer',
             'applied_at' => 'date',
             'closed_at' => 'date',
+            'deadline' => 'date',
         ];
     }
 }

@@ -58,7 +58,10 @@ class JobApplicationFactory extends Factory
                 ? null
                 : fake()->dateTimeBetween('-3 months', 'now'),
             'closed_at' => in_array($status, [
+                ApplicationStatus::Hired,
                 ApplicationStatus::Rejected,
+                ApplicationStatus::NoResponse,
+                ApplicationStatus::OfferDeclined,
                 ApplicationStatus::Withdrawn,
                 ApplicationStatus::Archived,
             ], true) ? now() : null,

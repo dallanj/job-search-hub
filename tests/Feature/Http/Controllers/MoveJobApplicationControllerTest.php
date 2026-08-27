@@ -183,3 +183,30 @@ test('moving an application returns to the filtered pipeline URL', function () {
 
     $response->assertRedirect($filteredPipelineUrl);
 });
+
+test('an application can be dragged into a status the tracker import introduces', function (ApplicationStatus $status) {
+    $user = User::factory()->create();
+    $application = JobApplication::factory()->for($user)->create([
+        'status' => ApplicationStatus::Offer,
+        'sort_order' => 0,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('pipeline.index'))
+        ->patch(route('pipeline.move', $application), [
+            'status' => $status->value,
+            'position' => 0,
+        ]);
+
+    $response->assertRedirect(route('pipeline.index'));
+    expect($application->refresh()->status)->toBe($status);
+    $this->assertDatabaseHas('application_status_events', [
+        'job_application_id' => $application->id,
+        'from_status' => ApplicationStatus::Offer->value,
+        'to_status' => $status->value,
+    ]);
+})->with([
+    'hired' => ApplicationStatus::Hired,
+    'no response' => ApplicationStatus::NoResponse,
+    'offer declined' => ApplicationStatus::OfferDeclined,
+]);
