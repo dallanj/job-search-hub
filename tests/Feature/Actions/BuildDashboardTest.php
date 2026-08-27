@@ -60,3 +60,30 @@ test('attention metrics and all dashboard data remain user scoped', function () 
         ])
         ->and($dashboard['summary']['active_applications'])->toBe(1);
 });
+
+test('a closed application counts as neither active nor needing a next action', function (ApplicationStatus $status) {
+    $user = User::factory()->create();
+    JobApplication::factory()->for($user)->withStatus($status)->create();
+
+    $dashboard = app(BuildDashboard::class)->handle($user);
+
+    expect($dashboard['summary']['active_applications'])->toBe(0)
+        ->and($dashboard['attention']['without_upcoming_action'])->toBe(0);
+})->with([
+    'hired' => ApplicationStatus::Hired,
+    'rejected' => ApplicationStatus::Rejected,
+    'no response' => ApplicationStatus::NoResponse,
+    'offer declined' => ApplicationStatus::OfferDeclined,
+    'withdrawn' => ApplicationStatus::Withdrawn,
+    'archived' => ApplicationStatus::Archived,
+]);
+
+test('an open application still counts as active and as needing a next action', function () {
+    $user = User::factory()->create();
+    JobApplication::factory()->for($user)->withStatus(ApplicationStatus::Offer)->create();
+
+    $dashboard = app(BuildDashboard::class)->handle($user);
+
+    expect($dashboard['summary']['active_applications'])->toBe(1)
+        ->and($dashboard['attention']['without_upcoming_action'])->toBe(1);
+});
