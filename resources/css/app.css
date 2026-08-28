@@ -51,6 +51,13 @@
     --color-chart-4: var(--chart-4);
     --color-chart-5: var(--chart-5);
 
+    --color-status-applied: var(--status-applied);
+    --color-status-screening: var(--status-screening);
+    --color-status-interview: var(--status-interview);
+    --color-status-offer: var(--status-offer);
+    --color-status-hired: var(--status-hired);
+    --color-status-closed: var(--status-closed);
+
     --color-sidebar: var(--sidebar-background);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -114,6 +121,12 @@
     --chart-3: hsl(197 37% 24%);
     --chart-4: hsl(43 74% 66%);
     --chart-5: hsl(27 87% 67%);
+    --status-applied: hsl(217 91% 54%);
+    --status-screening: hsl(189 94% 36%);
+    --status-interview: hsl(38 92% 45%);
+    --status-offer: hsl(258 90% 62%);
+    --status-hired: hsl(142 71% 39%);
+    --status-closed: hsl(0 74% 55%);
     --radius: 0.5rem;
     --sidebar-background: hsl(0 0% 98%);
     --sidebar-foreground: hsl(240 5.3% 26.1%);
@@ -151,6 +164,12 @@
     --chart-3: hsl(30 80% 55%);
     --chart-4: hsl(280 65% 60%);
     --chart-5: hsl(340 75% 55%);
+    --status-applied: hsl(217 91% 64%);
+    --status-screening: hsl(189 94% 50%);
+    --status-interview: hsl(38 92% 58%);
+    --status-offer: hsl(258 90% 70%);
+    --status-hired: hsl(142 69% 50%);
+    --status-closed: hsl(0 84% 65%);
     --sidebar-background: hsl(0 0% 7%);
     --sidebar-foreground: hsl(0 0% 95.9%);
     --sidebar-primary: hsl(360, 100%, 100%);

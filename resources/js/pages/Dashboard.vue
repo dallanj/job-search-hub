@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
-import {
-    ArrowRight,
-    BriefcaseBusiness,
-    CalendarClock,
-    Clock3,
-    TrendingUp,
-} from '@lucide/vue';
+import { ArrowRight } from '@lucide/vue';
 import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -70,21 +64,21 @@ defineOptions({
 const summaryCards = computed(() => [
     {
         label: 'Active applications',
-        value: props.summary.active_applications,
-        detail: 'Across your active pipeline',
-        icon: BriefcaseBusiness,
+        value: String(props.summary.active_applications),
+        detail: 'In your pipeline',
+        accent: 'border-l-status-applied',
     },
     {
-        label: 'Applications this week',
-        value: props.summary.applications_this_week,
-        detail: `${props.summary.applications_week_change >= 0 ? '+' : ''}${props.summary.applications_week_change} from last week`,
-        icon: TrendingUp,
+        label: 'Applied this week',
+        value: String(props.summary.applications_this_week),
+        detail: `${props.summary.applications_week_change >= 0 ? '+' : ''}${props.summary.applications_week_change} vs last week`,
+        accent: 'border-l-status-hired',
     },
     {
         label: 'Interview rate',
         value: `${props.summary.interview_rate}%`,
         detail: 'Of applications submitted',
-        icon: CalendarClock,
+        accent: 'border-l-status-interview',
     },
     {
         label: 'Median first response',
@@ -92,8 +86,8 @@ const summaryCards = computed(() => [
             props.summary.median_response_days === null
                 ? '—'
                 : `${props.summary.median_response_days}d`,
-        detail: 'Less affected by outliers',
-        icon: Clock3,
+        detail: 'Time to hear back',
+        accent: 'border-l-status-offer',
     },
 ]);
 const attentionItems = computed(() => [
@@ -134,6 +128,24 @@ const maxActivity = computed(() =>
 const maxResponseBucket = computed(() =>
     Math.max(1, ...props.response_time.buckets.map((bucket) => bucket.count)),
 );
+/** Stage bars share the status palette so the funnel reads as a progression. */
+const stageAccents: Record<string, string> = {
+    applied: 'bg-status-applied',
+    screening: 'bg-status-screening',
+    interview: 'bg-status-interview',
+    offer: 'bg-status-offer',
+};
+/** Response buckets run fast-to-slow, so the ramp goes green through red. */
+const bucketAccents = [
+    'bg-status-hired',
+    'bg-status-applied',
+    'bg-status-interview',
+    'bg-status-closed',
+];
+const responseShare = (count: number): number =>
+    props.response_time.total_responses === 0
+        ? 0
+        : Math.round((count / props.response_time.total_responses) * 100);
 const actionUrl = (action: UpcomingAction): string =>
     action.kind === 'task'
         ? taskShow.url(action.id)
@@ -153,51 +165,41 @@ const titleCase = (value: string): string =>
 
 <template>
     <Head title="Dashboard" />
-    <div class="flex flex-1 flex-col gap-6 p-4 md:p-6">
+    <div class="flex flex-1 flex-col gap-4 p-4 md:p-6">
         <div>
-            <h1 class="text-2xl font-semibold">Job search dashboard</h1>
+            <h1 class="text-xl font-semibold">Job search dashboard</h1>
             <p class="text-sm text-muted-foreground">
                 What needs attention and where your search is gaining traction.
             </p>
         </div>
 
-        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section class="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div
                 v-for="card in summaryCards"
                 :key="card.label"
-                class="rounded-xl border p-5"
+                class="rounded-xl border border-l-4 bg-card p-4"
+                :class="card.accent"
             >
-                <div class="flex items-center justify-between">
-                    <p class="text-sm text-muted-foreground">
-                        {{ card.label }}
-                    </p>
-                    <component
-                        :is="card.icon"
-                        class="size-4 text-muted-foreground"
-                    />
-                </div>
-                <p class="mt-3 text-3xl font-semibold">{{ card.value }}</p>
-                <p class="mt-1 text-xs text-muted-foreground">
-                    {{ card.detail }}
+                <p class="text-2xl font-semibold tabular-nums">
+                    {{ card.value }}
                 </p>
+                <p class="mt-1 text-sm font-medium">{{ card.label }}</p>
+                <p class="text-xs text-muted-foreground">{{ card.detail }}</p>
             </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <section class="rounded-xl border p-5">
-                <h2 class="font-semibold">Needs attention</h2>
-                <p class="text-sm text-muted-foreground">
-                    Turn insight into a next action.
-                </p>
-                <div class="mt-4 divide-y">
+        <div class="grid gap-4 md:grid-cols-2">
+            <section class="rounded-xl border bg-card p-5">
+                <h2 class="text-sm font-semibold">Needs attention</h2>
+                <div class="mt-2 divide-y">
                     <Link
                         v-for="item in attentionItems"
                         :key="item.label"
                         :href="item.href"
-                        class="flex items-center gap-3 py-3 hover:bg-muted/20"
+                        class="-mx-2 flex items-center gap-3 rounded-md px-2 py-2.5 hover:bg-muted/50"
                     >
                         <span
-                            class="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold"
+                            class="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold tabular-nums"
                             :class="{
                                 'bg-destructive/10 text-destructive':
                                     item.count > 0,
@@ -206,37 +208,36 @@ const titleCase = (value: string): string =>
                         >
                         <span class="min-w-0 flex-1 text-sm">{{
                             item.label
-                        }}</span
-                        ><span class="text-xs text-muted-foreground">{{
-                            item.action
-                        }}</span
-                        ><ArrowRight class="size-4 text-muted-foreground" />
+                        }}</span>
+                        <span
+                            class="hidden text-xs text-muted-foreground lg:inline"
+                            >{{ item.action }}</span
+                        >
+                        <ArrowRight
+                            class="size-4 shrink-0 text-muted-foreground"
+                        />
                     </Link>
                 </div>
             </section>
-            <section class="rounded-xl border p-5">
+
+            <section class="rounded-xl border bg-card p-5">
                 <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <h2 class="font-semibold">Next seven days</h2>
-                        <p class="text-sm text-muted-foreground">
-                            Tasks and interviews.
-                        </p>
-                    </div>
-                    <Button size="sm" variant="outline" as-child
+                    <h2 class="text-sm font-semibold">Next seven days</h2>
+                    <Button size="sm" variant="ghost" as-child
                         ><Link
                             :href="upcomingActionsIndex({ query: { days: 7 } })"
                             >View all</Link
                         ></Button
                     >
                 </div>
-                <div v-if="upcoming_actions.length" class="mt-4 divide-y">
+                <div v-if="upcoming_actions.length" class="mt-2 divide-y">
                     <Link
                         v-for="action in upcoming_actions"
                         :key="`${action.kind}-${action.id}`"
                         :href="actionUrl(action)"
-                        class="block py-3"
+                        class="-mx-2 block rounded-md px-2 py-2.5 hover:bg-muted/50"
                     >
-                        <div class="flex items-center justify-between gap-3">
+                        <div class="flex items-baseline justify-between gap-3">
                             <p class="truncate text-sm font-medium">
                                 {{ action.title }}
                             </p>
@@ -250,36 +251,41 @@ const titleCase = (value: string): string =>
                                 >{{ formatActionDate(action) }}</time
                             >
                         </div>
-                        <p class="mt-1 truncate text-xs text-muted-foreground">
+                        <p class="truncate text-xs text-muted-foreground">
                             {{ action.application.role_title }} at
                             {{ action.application.company.name }}
                         </p>
                     </Link>
                 </div>
-                <p v-else class="mt-6 text-sm text-muted-foreground">
+                <p v-else class="mt-4 text-sm text-muted-foreground">
                     No upcoming actions.
                 </p>
             </section>
         </div>
 
-        <div class="grid gap-6 xl:grid-cols-2">
-            <section class="rounded-xl border p-5">
-                <h2 class="font-semibold">Pipeline funnel</h2>
-                <p class="text-sm text-muted-foreground">
-                    Historical stage reach and conversion.
-                </p>
-                <div class="mt-5 space-y-4">
+        <div class="grid gap-4 md:grid-cols-2">
+            <section class="rounded-xl border bg-card p-5">
+                <div class="flex items-baseline justify-between gap-3">
+                    <h2 class="text-sm font-semibold">Pipeline funnel</h2>
+                    <span class="text-xs text-muted-foreground"
+                        >Stage reached, all time</span
+                    >
+                </div>
+                <div class="mt-4 space-y-3">
                     <div v-for="stage in funnel" :key="stage.stage">
                         <div class="mb-1 flex justify-between text-sm">
-                            <span>{{ titleCase(stage.stage) }}</span
-                            ><span class="text-muted-foreground"
+                            <span>{{ titleCase(stage.stage) }}</span>
+                            <span class="text-muted-foreground tabular-nums"
                                 >{{ stage.count }} ·
                                 {{ stage.conversion }}%</span
                             >
                         </div>
-                        <div class="h-3 overflow-hidden rounded-full bg-muted">
+                        <div
+                            class="h-2.5 overflow-hidden rounded-full bg-muted"
+                        >
                             <div
-                                class="h-full rounded-full bg-primary"
+                                class="h-full rounded-full"
+                                :class="stageAccents[stage.stage]"
                                 :style="{
                                     width: `${Math.max(stage.conversion, stage.count ? 3 : 0)}%`,
                                 }"
@@ -288,138 +294,128 @@ const titleCase = (value: string): string =>
                     </div>
                 </div>
             </section>
-            <section class="rounded-xl border p-5">
-                <h2 class="font-semibold">Applications by week</h2>
-                <p class="text-sm text-muted-foreground">
-                    Eight weeks of application momentum.
-                </p>
-                <div
-                    class="mt-5 flex h-48 items-end gap-3"
-                    aria-label="Applications submitted by week"
-                >
-                    <div
-                        v-for="week in activity"
-                        :key="week.week"
-                        class="flex h-full flex-1 flex-col justify-end gap-2"
-                    >
-                        <div class="text-center text-xs font-medium">
-                            {{ week.applications }}
-                        </div>
-                        <div
-                            class="min-h-1 rounded-t bg-primary"
-                            :style="{
-                                height: `${(week.applications / maxActivity) * 100}%`,
-                            }"
-                            :title="`${week.applications} applications, ${week.interviews} interviews`"
-                        />
-                        <div
-                            class="truncate text-center text-[10px] text-muted-foreground"
-                        >
-                            {{ week.label }}
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
 
-        <section class="rounded-xl border p-5">
-            <div class="grid gap-6 lg:grid-cols-[0.35fr_0.65fr]">
-                <div>
-                    <h2 class="font-semibold">Time to first response</h2>
-                    <p class="mt-4 text-4xl font-semibold">
-                        {{
-                            response_time.median_days === null
-                                ? '—'
-                                : `${response_time.median_days} days`
-                        }}
-                    </p>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        Median response time
-                    </p>
-                    <p class="mt-4 text-sm">
-                        <span class="font-medium">{{
-                            response_time.awaiting
-                        }}</span>
-                        still awaiting a response
-                    </p>
-                    <p
-                        v-if="response_time.quartile_low !== null"
-                        class="mt-1 text-xs text-muted-foreground"
+            <section class="rounded-xl border bg-card p-5">
+                <div class="flex items-baseline justify-between gap-3">
+                    <h2 class="text-sm font-semibold">
+                        Time to first response
+                    </h2>
+                    <span class="text-xs text-muted-foreground"
+                        >{{ response_time.awaiting }} still awaiting</span
                     >
-                        Middle 50%: {{ response_time.quartile_low }}–{{
-                            response_time.quartile_high
-                        }}
-                        days
-                    </p>
                 </div>
-                <div class="space-y-3">
+                <p class="mt-3 flex items-baseline gap-2">
+                    <span class="text-2xl font-semibold tabular-nums">{{
+                        response_time.median_days === null
+                            ? '—'
+                            : `${response_time.median_days} days`
+                    }}</span>
+                    <span class="text-xs text-muted-foreground">
+                        median<template
+                            v-if="response_time.quartile_low !== null"
+                            >, middle 50% {{ response_time.quartile_low }}–{{
+                                response_time.quartile_high
+                            }}d</template
+                        >
+                    </span>
+                </p>
+                <div class="mt-4 space-y-3">
                     <div
-                        v-for="bucket in response_time.buckets"
+                        v-for="(bucket, index) in response_time.buckets"
                         :key="bucket.label"
-                        class="grid grid-cols-[5rem_1fr_3rem] items-center gap-3 text-sm"
+                        class="grid grid-cols-[4.5rem_1fr_2.5rem] items-center gap-3 text-sm"
                     >
                         <span class="text-muted-foreground">{{
                             bucket.label
                         }}</span>
-                        <div class="h-3 overflow-hidden rounded-full bg-muted">
+                        <div
+                            class="h-2.5 overflow-hidden rounded-full bg-muted"
+                        >
                             <div
-                                class="h-full rounded-full bg-primary"
+                                class="h-full rounded-full"
+                                :class="bucketAccents[index]"
                                 :style="{
                                     width: `${(bucket.count / maxResponseBucket) * 100}%`,
                                 }"
                             />
                         </div>
-                        <span class="text-right"
-                            >{{
-                                response_time.total_responses
-                                    ? Math.round(
-                                          (bucket.count /
-                                              response_time.total_responses) *
-                                              100,
-                                      )
-                                    : 0
-                            }}%</span
+                        <span class="text-right tabular-nums"
+                            >{{ responseShare(bucket.count) }}%</span
                         >
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="rounded-xl border bg-card p-5">
+            <div class="flex items-baseline justify-between gap-3">
+                <h2 class="text-sm font-semibold">Applications by week</h2>
+                <span class="text-xs text-muted-foreground">Last 8 weeks</span>
+            </div>
+            <div
+                class="mt-4 flex h-32 items-end gap-2"
+                aria-label="Applications submitted by week"
+            >
+                <div
+                    v-for="week in activity"
+                    :key="week.week"
+                    class="flex h-full flex-1 flex-col justify-end gap-1.5"
+                >
+                    <div class="text-center text-xs tabular-nums">
+                        {{ week.applications }}
+                    </div>
+                    <div
+                        class="min-h-1 rounded-t bg-status-applied"
+                        :style="{
+                            height: `${(week.applications / maxActivity) * 100}%`,
+                        }"
+                        :title="`${week.applications} applications, ${week.interviews} interviews`"
+                    />
+                    <div
+                        class="truncate text-center text-[10px] text-muted-foreground"
+                    >
+                        {{ week.label }}
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="overflow-hidden rounded-xl border">
-            <div class="p-5">
-                <h2 class="font-semibold">Source performance</h2>
-                <p class="text-sm text-muted-foreground">
-                    Where applications produce meaningful progress.
-                </p>
-            </div>
+        <section class="overflow-hidden rounded-xl border bg-card">
+            <h2 class="p-5 pb-3 text-sm font-semibold">Source performance</h2>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead
                         class="border-y bg-muted/40 text-left text-xs text-muted-foreground uppercase"
                     >
                         <tr>
-                            <th class="px-5 py-3">Source</th>
-                            <th class="px-4 py-3">Applications</th>
-                            <th class="px-4 py-3">Response</th>
-                            <th class="px-4 py-3">Interview</th>
-                            <th class="px-4 py-3">Offer</th>
-                            <th class="px-4 py-3">Median response</th>
+                            <th class="px-5 py-2.5 font-medium">Source</th>
+                            <th class="px-4 py-2.5 font-medium">Apps</th>
+                            <th class="px-4 py-2.5 font-medium">Response</th>
+                            <th class="px-4 py-2.5 font-medium">Interview</th>
+                            <th class="px-4 py-2.5 font-medium">Offer</th>
+                            <th class="px-4 py-2.5 font-medium">
+                                Median response
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y">
                         <tr v-for="source in sources" :key="source.source">
-                            <td class="px-5 py-3 font-medium">
+                            <td class="px-5 py-2.5 font-medium">
                                 {{ source.source }}
                             </td>
-                            <td class="px-4 py-3">{{ source.applications }}</td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-2.5 tabular-nums">
+                                {{ source.applications }}
+                            </td>
+                            <td class="px-4 py-2.5 tabular-nums">
                                 {{ source.response_rate }}%
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-2.5 tabular-nums">
                                 {{ source.interview_rate }}%
                             </td>
-                            <td class="px-4 py-3">{{ source.offer_rate }}%</td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-2.5 tabular-nums">
+                                {{ source.offer_rate }}%
+                            </td>
+                            <td class="px-4 py-2.5 tabular-nums">
                                 {{
                                     source.median_response_days === null
                                         ? '—'
