@@ -9,6 +9,7 @@ use App\Http\Requests\StoreContactRequest;
 use App\Http\Requests\UpdateContactRequest;
 use App\Models\Company;
 use App\Models\Contact;
+use Dallanj\PiniaHydrate\Facades\PiniaHydrate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -35,10 +36,16 @@ class ContactController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('contacts/Index', [
+        PiniaHydrate::module('contacts', [
             'contacts' => $contacts,
-            'companies' => $this->companyOptions(),
-            'filters' => ['search' => $search, 'company_id' => $companyId],
+        ], 'replace');
+
+        if (! $request->headers->has('X-Inertia-Partial-Data')) {
+            PiniaHydrate::replace('options', ['companies']);
+        }
+
+        return Inertia::render('contacts/Index', [
+            '$pinia' => PiniaHydrate::toJson(),
         ]);
     }
 

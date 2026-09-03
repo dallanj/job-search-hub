@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Plus, Search } from '@lucide/vue';
+import { useDebounceFn } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import { reactive } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { create, index, show } from '@/routes/contacts';
-import type {
-    CompanyOption,
-    Contact,
-    ContactFilters,
-    Paginated,
-} from '@/types';
+import { useContactsStore } from '@/stores/contacts';
+import { useOptionsStore } from '@/stores/options';
 
-defineProps<{
-    contacts: Paginated<Contact>;
-    companies: CompanyOption[];
-    filters: ContactFilters;
-}>();
+const store = useContactsStore();
+const { contacts } = storeToRefs(store);
+const { companies } = storeToRefs(useOptionsStore());
+const query = new URL(usePage().url, 'http://localhost').searchParams;
+const filters = reactive({
+    search: query.get('search') ?? '',
+    company_id: query.get('company_id') ?? '',
+});
 
 defineOptions({
     layout: {
@@ -25,6 +27,22 @@ defineOptions({
 
 const paginationLabel = (label: string): string =>
     label.replace('&laquo;', '‹').replace('&raquo;', '›');
+
+const search = (): void => {
+    router.get(index.url(), filters, {
+        only: ['$pinia'],
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const searchAfterTyping = useDebounceFn(search, 300);
+
+const updateSearch = (value: string | number): void => {
+    filters.search = String(value);
+    void searchAfterTyping();
+};
 </script>
 
 <template>
@@ -58,16 +76,18 @@ const paginationLabel = (label: string): string =>
                     class="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground"
                 />
                 <Input
+                    :model-value="filters.search"
                     name="search"
-                    :default-value="filters.search ?? undefined"
                     class="pl-9"
                     placeholder="Search names, titles, emails, or companies"
+                    @update:model-value="updateSearch"
                 />
             </div>
             <select
                 name="company_id"
                 class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
-                :value="filters.company_id ?? ''"
+                v-model="filters.company_id"
+                @change="search"
             >
                 <option value="">All companies</option>
                 <option

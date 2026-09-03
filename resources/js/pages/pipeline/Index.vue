@@ -1,26 +1,23 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Filter, List, Plus, Search, X } from '@lucide/vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import { computed, reactive, ref } from 'vue';
 import KanbanColumn from '@/components/pipeline/KanbanColumn.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { create, index as applicationsIndex } from '@/routes/applications';
 import { index, move } from '@/routes/pipeline';
+import { useOptionsStore } from '@/stores/options';
+import { usePipelineStore } from '@/stores/pipeline';
 import type {
     ApplicationStatus,
-    CompanyOption,
     PipelineApplication,
     PipelineColumn,
     PipelineFilters,
 } from '@/types';
-
-const props = defineProps<{
-    columns: PipelineColumn[];
-    companies: CompanyOption[];
-    filters: PipelineFilters;
-}>();
 
 defineOptions({
     layout: {
@@ -37,73 +34,82 @@ const cloneColumns = (columns: PipelineColumn[]): PipelineColumn[] =>
         })),
     }));
 
-const board = ref(cloneColumns(props.columns));
+const pipeline = usePipelineStore();
+const { columns: board, matchingApplicationCount } = storeToRefs(pipeline);
+const { companies } = storeToRefs(useOptionsStore());
+
 const draggedApplicationId = ref<number | null>(null);
 const processing = ref(false);
+const query = new URL(usePage().url, 'http://localhost').searchParams;
 const filterValues = reactive({
-    search: props.filters.search ?? '',
-    company_id: props.filters.company_id?.toString() ?? '',
-    location: props.filters.location ?? '',
-    date_from: props.filters.date_from ?? '',
-    date_to: props.filters.date_to ?? '',
+    search: query.get('search') ?? '',
+    company_id: query.get('company_id') ?? '',
+    location: query.get('location') ?? '',
+    date_from: query.get('date_from') ?? '',
+    date_to: query.get('date_to') ?? '',
 });
 
-const activeFilters = computed(() => {
-    const filters: string[] = [];
+const filters = computed<PipelineFilters>(() => ({
+    search: filterValues.search.trim() || null,
+    company_id: filterValues.company_id
+        ? Number(filterValues.company_id)
+        : null,
+    location: filterValues.location.trim() || null,
+    date_from: filterValues.date_from || null,
+    date_to: filterValues.date_to || null,
+}));
 
-    if (props.filters.search) {
-        filters.push(`Search: ${props.filters.search}`);
+const activeFilters = computed<string[]>(() => {
+    const labels: string[] = [];
+
+    if (filters.value.search) {
+        labels.push(`Search: ${filters.value.search}`);
     }
 
-    if (props.filters.company_id) {
-        const company = props.companies.find(
-            (company) => company.id === props.filters.company_id,
+    if (filters.value.company_id) {
+        const company = companies.value.find(
+            ({ id }) => id === filters.value.company_id,
         );
-        filters.push(`Company: ${company?.name ?? props.filters.company_id}`);
+        labels.push(`Company: ${company?.name ?? filters.value.company_id}`);
     }
 
-    if (props.filters.location) {
-        filters.push(`Location: ${props.filters.location}`);
+    if (filters.value.location) {
+        labels.push(`Location: ${filters.value.location}`);
     }
 
-    if (props.filters.date_from) {
-        filters.push(`From: ${props.filters.date_from}`);
+    if (filters.value.date_from) {
+        labels.push(`From: ${filters.value.date_from}`);
     }
 
-    if (props.filters.date_to) {
-        filters.push(`To: ${props.filters.date_to}`);
+    if (filters.value.date_to) {
+        labels.push(`To: ${filters.value.date_to}`);
     }
 
-    return filters;
+    return labels;
 });
 
 const hasActiveFilters = computed(() => activeFilters.value.length > 0);
-const matchingApplicationCount = computed(() =>
-    board.value.reduce(
-        (count, column) => count + column.applications.length,
-        0,
-    ),
-);
 
-watch(
-    () => props.columns,
-    (columns) => {
-        board.value = cloneColumns(columns);
-    },
-    { deep: true },
-);
+const search = (): void => {
+    router.get(index.url(), filters.value, {
+        only: ['$pinia'],
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
 
-watch(
-    () => props.filters,
-    (filters) => {
-        filterValues.search = filters.search ?? '';
-        filterValues.company_id = filters.company_id?.toString() ?? '';
-        filterValues.location = filters.location ?? '';
-        filterValues.date_from = filters.date_from ?? '';
-        filterValues.date_to = filters.date_to ?? '';
-    },
-    { deep: true },
-);
+const searchAfterTyping = useDebounceFn(search, 300);
+
+const updateSearch = (value: string | number): void => {
+    filterValues.search = String(value);
+    void searchAfterTyping();
+};
+
+const updateLocation = (value: string | number): void => {
+    filterValues.location = String(value);
+    void searchAfterTyping();
+};
 
 const findApplication = (
     applicationId: number,
@@ -310,10 +316,11 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
                         class="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground"
                     />
                     <Input
-                        v-model="filterValues.search"
+                        :model-value="filterValues.search"
                         name="search"
                         class="pl-9"
                         placeholder="Role or company"
+                        @update:model-value="updateSearch"
                     />
                 </span>
             </label>
@@ -323,6 +330,7 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
                     v-model="filterValues.company_id"
                     name="company_id"
                     class="h-9 rounded-md border border-input bg-transparent px-3 text-sm font-normal shadow-xs"
+                    @change="search"
                 >
                     <option value="">All companies</option>
                     <option
@@ -337,9 +345,10 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
             <label class="grid gap-1.5 text-xs font-medium">
                 Location
                 <Input
-                    v-model="filterValues.location"
+                    :model-value="filterValues.location"
                     name="location"
                     placeholder="City or region"
+                    @update:model-value="updateLocation"
                 />
             </label>
             <label class="grid gap-1.5 text-xs font-medium">
@@ -348,6 +357,7 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
                     v-model="filterValues.date_from"
                     name="date_from"
                     type="date"
+                    @change="search"
                 />
             </label>
             <label class="grid gap-1.5 text-xs font-medium">
@@ -356,6 +366,7 @@ const moveAcross = (applicationId: number, offset: -1 | 1): void => {
                     v-model="filterValues.date_to"
                     name="date_to"
                     type="date"
+                    @change="search"
                 />
             </label>
             <div class="flex items-end gap-2 sm:col-span-2 xl:col-span-1">

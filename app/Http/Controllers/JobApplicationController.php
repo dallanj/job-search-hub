@@ -9,6 +9,7 @@ use App\Http\Requests\StoreJobApplicationRequest;
 use App\Http\Requests\UpdateJobApplicationRequest;
 use App\Models\Company;
 use App\Models\JobApplication;
+use Dallanj\PiniaHydrate\Facades\PiniaHydrate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -42,10 +43,16 @@ class JobApplicationController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('applications/Index', [
+        PiniaHydrate::module('applications', [
             'applications' => $applications,
-            'filters' => $filters,
-            'statuses' => $this->statuses(),
+        ], 'replace');
+
+        if (! $request->headers->has('X-Inertia-Partial-Data')) {
+            PiniaHydrate::replace('options', ['applicationStatuses']);
+        }
+
+        return Inertia::render('applications/Index', [
+            '$pinia' => PiniaHydrate::toJson(),
         ]);
     }
 

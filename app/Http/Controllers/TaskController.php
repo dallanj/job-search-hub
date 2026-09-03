@@ -8,6 +8,7 @@ use App\Http\Requests\IndexTaskRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
+use Dallanj\PiniaHydrate\Facades\PiniaHydrate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Pipeline\Pipeline;
@@ -33,7 +34,17 @@ class TaskController extends Controller
             ->when($status === 'overdue', fn (Builder $query): Builder => $query->whereNull('completed_at')->whereDate('due_at', '<', today()))
             ->orderByDesc('priority')->orderBy('due_at')->paginate(20)->withQueryString();
 
-        return Inertia::render('tasks/Index', ['tasks' => $tasks, 'filters' => ['search' => $search, 'status' => $status], 'priorities' => $this->priorities()]);
+        PiniaHydrate::module('tasks', [
+            'tasks' => $tasks,
+        ], 'replace');
+
+        if (! $request->headers->has('X-Inertia-Partial-Data')) {
+            PiniaHydrate::replace('options', ['taskPriorities']);
+        }
+
+        return Inertia::render('tasks/Index', [
+            '$pinia' => PiniaHydrate::toJson(),
+        ]);
     }
 
     public function create(): Response

@@ -3,7 +3,16 @@
 use App\Models\Company;
 use App\Models\Contact;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+
+/** @return array<string, mixed> */
+function contactsState(TestResponse $response): array
+{
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    return $payload['modules']['contacts']['state'];
+}
 
 function validContactPayload(array $overrides = []): array
 {
@@ -33,9 +42,13 @@ test('the index lists only the authenticated users contacts', function () {
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('contacts/Index')
-        ->has('contacts.data', 1)
-        ->where('contacts.data.0.id', $contact->id)
-        ->where('contacts.data.0.company.name', 'Acme'));
+        ->has('$pinia'));
+
+    $state = contactsState($response);
+
+    expect($state['contacts']['data'])->toHaveCount(1)
+        ->and($state['contacts']['data'][0]['id'])->toBe($contact->id)
+        ->and($state['contacts']['data'][0]['company']['name'])->toBe('Acme');
 });
 
 test('the index searches contact fields and companies and filters by company', function () {
@@ -52,11 +65,11 @@ test('the index searches contact fields and companies and filters by company', f
         'company_id' => $company->id,
     ]));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->has('contacts.data', 1)
-        ->where('contacts.data.0.id', $matchingContact->id)
-        ->where('filters.search', 'Northstar')
-        ->where('filters.company_id', $company->id));
+    $state = contactsState($response);
+
+    expect($state['contacts']['data'])->toHaveCount(1)
+        ->and($state['contacts']['data'][0]['id'])->toBe($matchingContact->id)
+        ->and($state)->not->toHaveKey('filters');
 });
 
 test('the create page includes only the authenticated users companies', function () {
