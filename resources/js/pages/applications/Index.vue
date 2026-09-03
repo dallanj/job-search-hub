@@ -1,16 +1,23 @@
 <script setup lang="ts">
-import { Form, Head, Link } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Plus, Search } from '@lucide/vue';
+import { useDebounceFn } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import { reactive } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { create, index, show } from '@/routes/applications';
-import type { JobApplication, Paginated, StatusOption } from '@/types';
+import { useApplicationsStore } from '@/stores/applications';
+import { useOptionsStore } from '@/stores/options';
 
-const props = defineProps<{
-    applications: Paginated<JobApplication>;
-    filters: { search?: string; status?: string };
-    statuses: StatusOption[];
-}>();
+const store = useApplicationsStore();
+const { applications } = storeToRefs(store);
+const { applicationStatuses: statuses } = storeToRefs(useOptionsStore());
+const query = new URL(usePage().url, 'http://localhost').searchParams;
+const filters = reactive({
+    search: query.get('search') ?? '',
+    status: query.get('status') ?? '',
+});
 
 defineOptions({
     layout: {
@@ -22,7 +29,23 @@ const paginationLabel = (label: string): string =>
     label.replace('&laquo;', '‹').replace('&raquo;', '›');
 
 const statusLabel = (value: string): string =>
-    props.statuses.find((status) => status.value === value)?.label ?? value;
+    statuses.value.find((status) => status.value === value)?.label ?? value;
+
+const search = (): void => {
+    router.get(index.url(), filters, {
+        only: ['$pinia'],
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const searchAfterTyping = useDebounceFn(search, 300);
+
+const updateSearch = (value: string | number): void => {
+    filters.search = String(value);
+    void searchAfterTyping();
+};
 </script>
 
 <template>
@@ -58,16 +81,18 @@ const statusLabel = (value: string): string =>
                     class="pointer-events-none absolute top-2.5 left-3 size-4 text-muted-foreground"
                 />
                 <Input
+                    :model-value="filters.search"
                     name="search"
-                    :default-value="filters.search"
                     class="pl-9"
                     placeholder="Search roles or companies"
+                    @update:model-value="updateSearch"
                 />
             </div>
             <select
                 name="status"
                 class="h-9 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs"
-                :value="filters.status ?? ''"
+                v-model="filters.status"
+                @change="search"
             >
                 <option value="">All stages</option>
                 <option

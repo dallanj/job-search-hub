@@ -4,7 +4,24 @@ use App\Enums\ApplicationStatus;
 use App\Models\Company;
 use App\Models\JobApplication;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+
+/** @return array<string, mixed> */
+function pipelineState(TestResponse $response): array
+{
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    return $payload['modules']['pipeline']['state'];
+}
+
+/** @return array<string, mixed> */
+function pipelineOptionsState(TestResponse $response): array
+{
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    return $payload['modules']['options']['state'];
+}
 
 test('guests are redirected to login', function () {
     $response = $this->get(route('pipeline.index'));
@@ -34,12 +51,18 @@ test('the pipeline renders every stage with only the users ordered applications'
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('pipeline/Index')
-        ->has('columns', count(ApplicationStatus::cases()))
-        ->where('columns.0.status', ApplicationStatus::Saved->value)
-        ->where('columns.1.status', ApplicationStatus::Applied->value)
-        ->has('columns.1.applications', 2)
-        ->where('columns.1.applications.0.id', $firstApplication->id)
-        ->where('columns.1.applications.1.id', $secondApplication->id));
+        ->has('$pinia'));
+
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+    $state = pipelineState($response);
+
+    expect($payload['modules']['pipeline']['mode'])->toBe('replace')
+        ->and($state['columns'])->toHaveCount(count(ApplicationStatus::cases()))
+        ->and($state['columns'][0]['status'])->toBe(ApplicationStatus::Saved->value)
+        ->and($state['columns'][1]['status'])->toBe(ApplicationStatus::Applied->value)
+        ->and($state['columns'][1]['applications'])->toHaveCount(2)
+        ->and($state['columns'][1]['applications'][0]['id'])->toBe($firstApplication->id)
+        ->and($state['columns'][1]['applications'][1]['id'])->toBe($secondApplication->id);
 });
 
 test('the pipeline searches configured model fields and relationships', function (
@@ -60,10 +83,11 @@ test('the pipeline searches configured model fields and relationships', function
 
     $response = $this->actingAs($user)->get(route('pipeline.index', ['search' => "  {$term}  "]));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->has('columns.1.applications', 1)
-        ->where('columns.1.applications.0.id', $matchingApplication->id)
-        ->where('filters.search', $term));
+    $state = pipelineState($response);
+
+    expect($state['columns'][1]['applications'])->toHaveCount(1)
+        ->and($state['columns'][1]['applications'][0]['id'])->toBe($matchingApplication->id)
+        ->and($state)->not->toHaveKey('filters');
 })->with([
     'role title' => ['Platform Engineer', 'Senior Platform Engineer', 'Acme'],
     'company relationship' => ['Northstar', 'Developer', 'Northstar Labs'],
@@ -100,13 +124,11 @@ test('the pipeline combines company location and application date filters', func
         'date_to' => '2026-08-31',
     ]));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->has('columns.1.applications', 1)
-        ->where('columns.1.applications.0.id', $matchingApplication->id)
-        ->where('filters.company_id', $company->id)
-        ->where('filters.location', 'Edmonton')
-        ->where('filters.date_from', '2026-08-01')
-        ->where('filters.date_to', '2026-08-31'));
+    $state = pipelineState($response);
+
+    expect($state['columns'][1]['applications'])->toHaveCount(1)
+        ->and($state['columns'][1]['applications'][0]['id'])->toBe($matchingApplication->id)
+        ->and($state)->not->toHaveKey('filters');
 });
 
 test('the pipeline exposes only the users companies as filter options', function () {
@@ -116,9 +138,22 @@ test('the pipeline exposes only the users companies as filter options', function
 
     $response = $this->actingAs($user)->get(route('pipeline.index'));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->has('companies', 1)
-        ->where('companies.0.name', 'Owned Company'));
+    $state = pipelineOptionsState($response);
+
+    expect($state['companies'])->toHaveCount(1)
+        ->and($state['companies'][0]['name'])->toBe('Owned Company');
+});
+
+test('partial pipeline searches preserve existing options', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('pipeline.index'), [
+        'X-Inertia-Partial-Data' => '$pinia',
+    ]);
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    expect($payload['modules'])->toHaveKey('pipeline')
+        ->and($payload['modules'])->not->toHaveKey('options');
 });
 
 test('the pipeline rejects invalid filters', function (array $filters, string $errorKey) {
@@ -158,12 +193,12 @@ test('the pipeline gives every tracker status its own labelled column', function
 
     $response = $this->actingAs($user)->get(route('pipeline.index'));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->component('pipeline/Index')
-        ->where("columns.{$columnIndex}.status", $status->value)
-        ->where("columns.{$columnIndex}.label", $label)
-        ->has("columns.{$columnIndex}.applications", 1)
-        ->where("columns.{$columnIndex}.applications.0.id", $application->id));
+    $state = pipelineState($response);
+
+    expect($state['columns'][$columnIndex]['status'])->toBe($status->value)
+        ->and($state['columns'][$columnIndex]['label'])->toBe($label)
+        ->and($state['columns'][$columnIndex]['applications'])->toHaveCount(1)
+        ->and($state['columns'][$columnIndex]['applications'][0]['id'])->toBe($application->id);
 })->with([
     'hired' => [ApplicationStatus::Hired, 'Hired', 5],
     'no response' => [ApplicationStatus::NoResponse, 'No Response', 7],

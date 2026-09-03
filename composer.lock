@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "859863f5ca81e4a2e3cf62f862513073",
+    "content-hash": "f277fbca5107e7598f53a201ef9172ba",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -188,6 +188,66 @@
                 }
             ],
             "time": "2024-02-09T16:56:22+00:00"
+        },
+        {
+            "name": "dallanj/laravel-pinia-hydrate",
+            "version": "v0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/dallanj/pinia-hydrate.git",
+                "reference": "ff5126a4b5e4c3e7a2c4c2e3b1eb85dcc8781cc5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/dallanj/pinia-hydrate/zipball/ff5126a4b5e4c3e7a2c4c2e3b1eb85dcc8781cc5",
+                "reference": "ff5126a4b5e4c3e7a2c4c2e3b1eb85dcc8781cc5",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/console": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/http": "^11.0 || ^12.0 || ^13.0",
+                "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.18",
+                "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+                "phpunit/phpunit": "^11.0 || ^12.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "PiniaHydrate": "Dallanj\\PiniaHydrate\\Facades\\PiniaHydrate"
+                    },
+                    "providers": [
+                        "Dallanj\\PiniaHydrate\\PiniaHydrateServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Dallanj\\PiniaHydrate\\": "packages/laravel/src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Explicitly hydrate Pinia stores from Laravel responses.",
+            "homepage": "https://github.com/dallanj/pinia-hydrate",
+            "keywords": [
+                "hydration",
+                "laravel",
+                "pinia",
+                "vue"
+            ],
+            "support": {
+                "issues": "https://github.com/dallanj/pinia-hydrate/issues",
+                "source": "https://github.com/dallanj/pinia-hydrate"
+            },
+            "time": "2026-08-30T00:57:55+00:00"
         },
         {
             "name": "dasprid/enum",

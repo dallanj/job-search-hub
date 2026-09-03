@@ -5,7 +5,16 @@ use App\Models\Company;
 use App\Models\JobApplication;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+
+/** @return array<string, mixed> */
+function tasksState(TestResponse $response): array
+{
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    return $payload['modules']['tasks']['state'];
+}
 
 function validTaskPayload(JobApplication $application, array $overrides = []): array
 {
@@ -27,12 +36,18 @@ test('the index lists only the users tasks', function () {
     $task = Task::factory()->for($application, 'jobApplication')->create();
     Task::factory()->create();
 
-    $this->actingAs($user)->get(route('tasks.index'))->assertInertia(
+    $response = $this->actingAs($user)->get(route('tasks.index'));
+
+    $response->assertInertia(
         fn (Assert $page) => $page
             ->component('tasks/Index')
-            ->has('tasks.data', 1)
-            ->where('tasks.data.0.id', $task->id),
+            ->has('$pinia'),
     );
+
+    $state = tasksState($response);
+
+    expect($state['tasks']['data'])->toHaveCount(1)
+        ->and($state['tasks']['data'][0]['id'])->toBe($task->id);
 });
 
 test('tasks can be searched and filtered by status', function () {
@@ -48,13 +63,14 @@ test('tasks can be searched and filtered by status', function () {
         'due_at' => today()->addDay(),
     ]);
 
-    $this->actingAs($user)
-        ->get(route('tasks.index', ['search' => 'Acme', 'status' => 'overdue']))
-        ->assertInertia(fn (Assert $page) => $page
-            ->has('tasks.data', 1)
-            ->where('tasks.data.0.id', $matching->id)
-            ->where('filters.search', 'Acme')
-            ->where('filters.status', 'overdue'));
+    $response = $this->actingAs($user)
+        ->get(route('tasks.index', ['search' => 'Acme', 'status' => 'overdue']));
+
+    $state = tasksState($response);
+
+    expect($state['tasks']['data'])->toHaveCount(1)
+        ->and($state['tasks']['data'][0]['id'])->toBe($matching->id)
+        ->and($state)->not->toHaveKey('filters');
 });
 
 test('a user can create update and delete a task', function () {

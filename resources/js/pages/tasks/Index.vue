@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Check, Circle, Plus, Search } from '@lucide/vue';
-import { computed } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
+import { storeToRefs } from 'pinia';
+import { computed, reactive } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { completion, create, index, show } from '@/routes/tasks';
-import type {
-    FollowUpTask,
-    Paginated,
-    TaskFilters,
-    TaskPriorityOption,
-} from '@/types';
+import { useOptionsStore } from '@/stores/options';
+import { useTasksStore } from '@/stores/tasks';
+import type { TaskFilters } from '@/types';
 
-const props = defineProps<{
-    tasks: Paginated<FollowUpTask>;
-    filters: TaskFilters;
-    priorities: TaskPriorityOption[];
-}>();
+const store = useTasksStore();
+const { tasks } = storeToRefs(store);
+const { taskPriorities: priorities } = storeToRefs(useOptionsStore());
+const query = new URL(usePage().url, 'http://localhost').searchParams;
+const filters = reactive<TaskFilters>({
+    search: query.get('search'),
+    status: (query.get('status') as TaskFilters['status'] | null) ?? 'open',
+});
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Tasks', href: index() }] },
@@ -29,7 +31,7 @@ const tabs = [
 ] as const;
 
 const priorityLabel = (value: number): string =>
-    props.priorities.find((priority) => priority.value === value)?.label ??
+    priorities.value.find((priority) => priority.value === value)?.label ??
     'Normal';
 
 const formatDate = (value: string): string =>
@@ -38,15 +40,28 @@ const formatDate = (value: string): string =>
     );
 
 const filtered = computed(
-    () => props.filters.search !== null || props.filters.status !== 'open',
+    () => filters.search !== null || filters.status !== 'open',
 );
 
+const search = (): void => {
+    router.get(index.url(), filters, {
+        only: ['$pinia'],
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+    });
+};
+
+const searchAfterTyping = useDebounceFn(search, 300);
+
+const updateSearch = (value: string | number): void => {
+    filters.search = String(value) || null;
+    void searchAfterTyping();
+};
+
 const changeStatus = (status: TaskFilters['status']): void => {
-    router.get(
-        index.url(),
-        { search: props.filters.search ?? undefined, status },
-        { preserveState: true, preserveScroll: true, replace: true },
-    );
+    filters.status = status;
+    search();
 };
 </script>
 
@@ -77,10 +92,11 @@ const changeStatus = (status: TaskFilters['status']): void => {
                         class="absolute top-2.5 left-3 size-4 text-muted-foreground"
                     />
                     <Input
+                        :model-value="filters.search ?? ''"
                         name="search"
-                        :default-value="filters.search ?? ''"
                         class="pl-9"
                         placeholder="Search tasks or applications"
+                        @update:model-value="updateSearch"
                     />
                 </div>
                 <Button variant="outline">Search</Button>

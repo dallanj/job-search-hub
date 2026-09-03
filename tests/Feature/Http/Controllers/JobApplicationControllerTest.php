@@ -5,7 +5,16 @@ use App\Models\ApplicationStatusEvent;
 use App\Models\Company;
 use App\Models\JobApplication;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+
+/** @return array<string, mixed> */
+function applicationsState(TestResponse $response): array
+{
+    $payload = json_decode($response->inertiaProps('$pinia'), true, flags: JSON_THROW_ON_ERROR);
+
+    return $payload['modules']['applications']['state'];
+}
 
 function validJobApplicationPayload(array $overrides = []): array
 {
@@ -44,9 +53,13 @@ test('the index lists only the authenticated users applications', function () {
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('applications/Index')
-        ->has('applications.data', 1)
-        ->where('applications.data.0.id', $application->id)
-        ->where('applications.data.0.company.name', 'Acme'));
+        ->has('$pinia'));
+
+    $state = applicationsState($response);
+
+    expect($state['applications']['data'])->toHaveCount(1)
+        ->and($state['applications']['data'][0]['id'])->toBe($application->id)
+        ->and($state['applications']['data'][0]['company']['name'])->toBe('Acme');
 });
 
 test('the index filters applications by search and status', function () {
@@ -66,11 +79,11 @@ test('the index filters applications by search and status', function () {
         'status' => ApplicationStatus::Interview->value,
     ]));
 
-    $response->assertInertia(fn (Assert $page) => $page
-        ->has('applications.data', 1)
-        ->where('applications.data.0.id', $matchingApplication->id)
-        ->where('filters.search', 'Northstar')
-        ->where('filters.status', 'interview'));
+    $state = applicationsState($response);
+
+    expect($state['applications']['data'])->toHaveCount(1)
+        ->and($state['applications']['data'][0]['id'])->toBe($matchingApplication->id)
+        ->and($state)->not->toHaveKey('filters');
 });
 
 test('the create page includes only the authenticated users companies', function () {
